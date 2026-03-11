@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Efficiency Predictor - ML Model</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height:100vh; padding:20px;
+        }
+        .container { max-width:1200px; margin:0 auto; }
+        .header { text-align:center; color:white; margin-bottom:40px; }
+        .header h1 { font-size:3em; margin-bottom:10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size:1.2em; opacity:0.95; }
+        .model-stats {
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+            padding:15px 30px; border-radius:50px; display:inline-block; margin-top:15px; font-weight:600;
+        }
+        .ml-indicator {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: inline-block;
+        }
+        .ml-indicator strong { color:#10b981; }
+        .main-content { display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-bottom:30px; }
+        .card {
+            background:white; border-radius:20px; padding:30px;
+            box-shadow:0 20px 60px rgba(0,0,0,0.3);
+        }
+        .card h2 { color:#333; margin-bottom:25px; font-size:1.8em; }
+        .input-group { margin-bottom:25px; }
+        .input-group label {
+            display:block; font-weight:600; color:#555; margin-bottom:8px; font-size:0.95em;
+        }
+        input[type="number"] {
+            width:100%; padding:10px; border-radius:5px; border:1px solid #ccc; font-size:1em;
+        }
+        .prediction-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color:white; text-align:center; padding:40px;
+        }
+        .prediction-value { font-size:5em; font-weight:800; margin:20px 0; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
+        .prediction-label { font-size:1.5em; opacity:0.95; font-weight:600; }
+        .efficiency-badge {
+            display:inline-block; padding:12px 30px; border-radius:50px; font-weight:700; font-size:1.1em; margin-top:20px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.2);
+        }
+        .excellent { background:#10b981; color:white; }
+        .good { background:#3b82f6; color:white; }
+        .average { background:#f59e0b; color:white; }
+        .poor { background:#ef4444; color:white; }
+        .metrics-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:20px; }
+        .metric-box { background:#f8f9fa; padding:15px; border-radius:10px; border-left:4px solid #667eea; }
+        .metric-label { font-size:0.85em; color:#666; margin-bottom:5px; }
+        .metric-value { font-size:1.3em; font-weight:700; color:#333; }
+        .info-section { background:#f0f4ff; padding:15px; border-radius:10px; margin-top:20px; border-left:4px solid #667eea; }
+        .info-section h3 { color:#667eea; margin-bottom:10px; font-size:1.1em; }
+        .info-section p { color:#555; line-height:1.6; font-size:0.9em; }
+        .model-info { display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; }
+        .model-info-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; }
+        .model-info-label { color:#666; }
+        .model-info-value { font-weight:700; color:#333; }
+        footer { text-align:center; color:white; margin-top:30px; opacity:0.9; }
+        @media(max-width:768px) { .main-content{grid-template-columns:1fr;} .header h1{font-size:2em;} .prediction-value{font-size:3.5em;} }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fuel Efficiency Predictor</h1>
+            <p>AI-Powered MPG Prediction using Machine Learning</p>
+            <div class="model-stats">
+                R-Squared Score: 0.7704 | MAE: 1.67 MPG | Accuracy: 97.5%
+            </div>
+            <div class="ml-indicator">
+                <strong>USING YOUR TRAINED RIDGE REGRESSION MODEL</strong>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>Vehicle Specifications</h2>
+                <div class="input-group">
+                    <label>Cylinders</label>
+                    <input type="number" id="cylinders" min="3" max="8" value="4" step="1">
+                </div>
+                <div class="input-group">
+                    <label>Displacement (cubic inches)</label>
+                    <input type="number" id="displacement" min="50" max="500" value="200" step="10">
+                </div>
+                <div class="input-group">
+                    <label>Horsepower</label>
+                    <input type="number" id="horsepower" min="40" max="400" value="120" step="5">
+                </div>
+                <div class="input-group">
+                    <label>Weight (pounds)</label>
+                    <input type="number" id="weight" min="1500" max="5500" value="2600" step="50">
+                </div>
+                <div class="input-group">
+                    <label>Acceleration (0-60 mph in seconds)</label>
+                    <input type="number" id="acceleration" min="8" max="25" value="15" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Model Year</label>
+                    <input type="number" id="model_year" min="1970" max="2025" value="2022" step="1">
+                </div>
+
+                <div class="info-section">
+                    <h3>About This Model</h3>
+                    <p>This predictor uses your trained Ridge Regression model with 11 engineered features. The model automatically calculates advanced metrics like power-to-weight ratio and displacement per cylinder for accurate predictions.</p>
+                </div>
+            </div>
+
+            <div>
+                <div class="card prediction-card">
+                    <div class="prediction-label">Predicted Fuel Efficiency</div>
+                    <div class="prediction-value" id="prediction">--</div>
+                    <div class="prediction-label">Miles Per Gallon</div>
+                    <div class="efficiency-badge" id="efficiency-badge">Calculating...</div>
+                </div>
+
+                <div class="card" style="margin-top:30px;">
+                    <h2>Calculated Features</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <div class="metric-label">Power to Weight</div>
+                            <div class="metric-value" id="power-to-weight">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Disp. per Cylinder</div>
+                            <div class="metric-value" id="disp-per-cyl">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Weight per Cylinder</div>
+                            <div class="metric-value" id="weight-per-cyl">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Power/Displacement</div>
+                            <div class="metric-value" id="power-disp">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:30px;">
+                    <h2>Model Information</h2>
+                    <div class="model-info">
+                        <div class="model-info-item">
+                            <span class="model-info-label">Algorithm:</span>
+                            <span class="model-info-value">Ridge Regression</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Features Used:</span>
+                            <span class="model-info-value">11 Engineered</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">R-Squared Score:</span>
+                            <span class="model-info-value" style="color:#10b981;">0.7704</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Mean Abs Error:</span>
+                            <span class="model-info-value" style="color:#10b981;">1.67 MPG</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Training Time:</span>
+                            <span class="model-info-value">207.31 sec</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Dataset:</span>
+                            <span class="model-info-value">Auto MPG</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>2025 ML-Powered Fuel Efficiency Predictor | Using Your Trained Ridge Regression Model</p>
+            <p style="font-size:0.9em; margin-top:10px;">Model trained on ~300 samples with 97.5% accuracy</p>
+        </footer>
+    </div>
+
+    <script>
+        var MODEL = {
+            features: ["cylinders","displacement","horsepower","weight","acceleration","model_year","power_to_weight","displacement_per_cylinder","weight_per_cylinder","power_displacement_ratio","weight_acceleration"],
+            coefficients: [-1.553691950865797,-1.7833264498727608,-1.3304122998915677,-2.04859418801031,1.6450830931095937,0.7827914821506602,-0.11085438967329853,-0.025077541070193294,0.1102823130091367,-0.006578179540638835,0.07493256981952226],
+            intercept:67.13761247954052,
+            scaler_mean:[5.028592375366569,293.0097439188327,173.68139404771688,3236.2544280226757,14.033788630855035,1997.0474444909928,0.059978206992097355,62.27804543760246,688.4807321508617,0.7495426371629768,45397.44743811658],
+            scaler_std:[1.3537173710673378,120.74563087044105,71.72002794385277,1015.0264753461045,3.4459595272391197,15.785770943148176,0.03382941331894724,30.54544991051915,280.7903921632555,0.5539130967255756,18382.284401166493]
+        };
+
+        function calculateFeatures(inputs){
+            return {
+                cylinders: inputs.cylinders,
+                displacement: inputs.displacement,
+                horsepower: inputs.horsepower,
+                weight: inputs.weight,
+                acceleration: inputs.acceleration,
+                model_year: inputs.model_year,
+                power_to_weight: inputs.horsepower / inputs.weight,
+                displacement_per_cylinder: inputs.displacement / inputs.cylinders,
+                weight_per_cylinder: inputs.weight / inputs.cylinders,
+                power_displacement_ratio: inputs.horsepower / inputs.displacement,
+                weight_acceleration: inputs.weight * inputs.acceleration
+            };
+        }
+
+        function standardizeFeatures(features){
+            return MODEL.features.map(function(feature, idx){
+                return (features[feature] - MODEL.scaler_mean[idx]) / MODEL.scaler_std[idx];
+            });
+        }
+
+        function predictMPG(features){
+            var standardized = standardizeFeatures(features);
+            var prediction = MODEL.intercept;
+            standardized.forEach(function(value, idx){
+                prediction += value * MODEL.coefficients[idx];
+            });
+            return Math.max(0,prediction);
+        }
+
+        function getEfficiencyRating(mpg){
+            if(mpg >=35) return {label:'Excellent', className:'excellent'};
+            if(mpg >=25) return {label:'Good', className:'good'};
+            if(mpg >=18) return {label:'Average', className:'average'};
+            return {label:'Poor', className:'poor'};
+        }
+
+        function updatePrediction(){
+            var inputs = {
+                cylinders: parseFloat(document.getElementById('cylinders').value),
+                displacement: parseFloat(document.getElementById('displacement').value),
+                horsepower: parseFloat(document.getElementById('horsepower').value),
+                weight: parseFloat(document.getElementById('weight').value),
+                acceleration: parseFloat(document.getElementById('acceleration').value),
+                model_year: parseFloat(document.getElementById('model_year').value)
+            };
+
+            var features = calculateFeatures(inputs);
+            var mpg = predictMPG(features);
+            var rating = getEfficiencyRating(mpg);
+
+            document.getElementById('prediction').textContent = mpg.toFixed(1);
+
+            var badge = document.getElementById('efficiency-badge');
+            badge.textContent = rating.label + ' Efficiency';
+            badge.className = 'efficiency-badge ' + rating.className;
+
+            document.getElementById('power-to-weight').textContent = features.power_to_weight.toFixed(4);
+            document.getElementById('disp-per-cyl').textContent = features.displacement_per_cylinder.toFixed(1);
+            document.getElementById('weight-per-cyl').textContent = features.weight_per_cylinder.toFixed(0);
+            document.getElementById('power-disp').textContent = features.power_displacement_ratio.toFixed(3);
+        }
+
+        ['cylinders','displacement','horsepower','weight','acceleration','model_year'].forEach(function(id){
+            document.getElementById(id).addEventListener('input', updatePrediction);
+        });
+
+        updatePrediction();
+    </script>
+</body>
+</html>
